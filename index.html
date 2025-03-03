@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neubrutalist Todo App</title>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react-router-dom@5.2.0/umd/react-router-dom.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .neubrutalism {
+            box-shadow: 5px 5px 0px 0px #000000;
+            border: 3px solid #000000;
+        }
+        .neubrutalism:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px 0px #000000;
+        }
+        body {
+            background-color: #ffd7d7;
+        }
+        .task-card {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { BrowserRouter, Route, Switch, Link, useHistory } = ReactRouterDOM;
+
+        function App() {
+            const [tasks, setTasks] = useState(() => {
+                const savedTasks = localStorage.getItem('tasks');
+                return savedTasks ? JSON.parse(savedTasks) : [];
+            });
+
+            useEffect(() => {
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+            }, [tasks]);
+
+            const addTask = (task) => {
+                setTasks([...tasks, { ...task, id: Date.now(), completed: false }]);
+            };
+
+            const deleteTask = (id) => {
+                setTasks(tasks.filter(task => task.id !== id));
+            };
+
+            const toggleComplete = (id) => {
+                setTasks(tasks.map(task => 
+                    task.id === id ? { ...task, completed: !task.completed } : task
+                ));
+            };
+
+            const editTask = (id, updatedTask) => {
+                setTasks(tasks.map(task =>
+                    task.id === id ? { ...task, ...updatedTask } : task
+                ));
+            };
+
+            return (
+                <BrowserRouter>
+                    <div className="container mx-auto px-4 py-8 max-w-4xl">
+                        <h1 className="text-4xl font-bold mb-8 text-center">
+                            <span className="bg-yellow-300 neubrutalism p-2 inline-block">
+                                Neubrutalist Todo App
+                            </span>
+                        </h1>
+
+                        <Switch>
+                            <Route exact path="/">
+                                <TaskList 
+                                    tasks={tasks}
+                                    onDelete={deleteTask}
+                                    onToggle={toggleComplete}
+                                    onEdit={editTask}
+                                />
+                                <AddTaskButton />
+                            </Route>
+                            <Route path="/add">
+                                <AddTask onAdd={addTask} />
+                            </Route>
+                            <Route path="/edit/:id">
+                                <EditTask tasks={tasks} onEdit={editTask} />
+                            </Route>
+                        </Switch>
+                    </div>
+                </BrowserRouter>
+            );
+        }
+
+        function TaskList({ tasks, onDelete, onToggle, onEdit }) {
+            return (
+                <div className="space-y-4">
+                    {tasks.map(task => (
+                        <div key={task.id} 
+                            className={`p-4 bg-white neubrutalism task-card ${
+                                task.completed ? 'bg-green-100' : ''
+                            }`}>
+                            <div className="flex justify-between items-center">
+                                <div className="flex-1">
+                                    <h3 className={`text-xl font-bold ${
+                                        task.completed ? 'line-through' : ''
+                                    }`}>{task.title}</h3>
+                                    <p className="mt-2">{task.description}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => onToggle(task.id)}
+                                        className="bg-blue-400 neubrutalism p-2"
+                                    >
+                                        <i className="bi bi-check2-square"></i>
+                                    </button>
+                                    <Link 
+                                        to={`/edit/${task.id}`}
+                                        className="bg-yellow-400 neubrutalism p-2"
+                                    >
+                                        <i className="bi bi-pencil"></i>
+                                    </Link>
+                                    <button 
+                                        onClick={() => onDelete(task.id)}
+                                        className="bg-red-400 neubrutalism p-2"
+                                    >
+                                        <i className="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function AddTaskButton() {
+            return (
+                <Link to="/add" className="fixed bottom-8 right-8">
+                    <button className="bg-green-400 neubrutalism p-4 text-2xl">
+                        <i className="bi bi-plus-lg"></i>
+                    </button>
+                </Link>
+            );
+        }
+
+        function AddTask({ onAdd }) {
+            const [title, setTitle] = useState('');
+            const [description, setDescription] = useState('');
+            const history = useHistory();
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!title.trim()) return;
+                onAdd({ title, description });
+                history.push('/');
+            };
+
+            return (
+                <div className="bg-white neubrutalism p-6">
+                    <h2 className="text-2xl font-bold mb-4">Add New Task</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block mb-2">Title</label>
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="w-full p-2 neubrutalism"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-2">Description</label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full p-2 neubrutalism"
+                                rows="3"
+                            />
+                        </div>
+                        <div className="flex gap-4">
+                            <button 
+                                type="submit"
+                                className="bg-green-400 neubrutalism p-2 px-4"
+                            >
+                                Add Task
+                            </button>
+                            <Link 
+                                to="/"
+                                className="bg-gray-400 neubrutalism p-2 px-4"
+                            >
+                                Cancel
+                            </Link>
+                        </div>
+                    </form>
+                </div>
+            );
+        }
+
+        function EditTask({ tasks, onEdit }) {
+            const history = useHistory();
+            const taskId = parseInt(window.location.pathname.split('/').pop());
+            const task = tasks.find(t => t.id === taskId);
+
+            const [title, setTitle] = useState(task ? task.title : '');
+            const [description, setDescription] = useState(task ? task.description : '');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!title.trim()) return;
+                onEdit(taskId, { title, description });
+                history.push('/');
+            };
+
+            if (!task) {
+                history.push('/');
+                return null;
+            }
+
+            return (
+                <div className="bg-white neubrutalism p-6">
+                    <h2 className="text-2xl font-bold mb-4">Edit Task</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label className="block mb-2">Title</label>
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                className="w-full p-2 neubrutalism"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-2">Description</label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                className="w-full p-2 neubrutalism"
+                                rows="3"
+                            />
+                        </div>
+                        <div className="flex gap-4">
+                            <button 
+                                type="submit"
+                                className="bg-yellow-400 neubrutalism p-2 px-4"
+                            >
+                                Update Task
+                            </button>
+                            <Link 
+                                to="/"
+                                className="bg-gray-400 neubrutalism p-2 px-4"
+                            >
+                                Cancel
+                            </Link>
+                        </div>
+                    </form>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
